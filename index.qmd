@@ -1,33 +1,181 @@
 ---
-title: "Container test"
-author: "James Goldie"
+title: "Youth Mental Health & Social Media"
+author: "Dean Marchiori"
 format: html
 ---
 
-I love containers! So useful. Can we do R stuff in the rocker container? Let's see:
+# Mental Health Conditions by Age & Gender  
 
 ```{r}
-#| label: rtest
-
-library(tibble)
-
-mydata <- tibble(x = 1:10, y = x^2)
-ojs_define(mydata)
+library(tidyverse)
 ```
 
-And maybe an Observable chart too?
 
-```{ojs}
-//| label: somechart
-
-Plot.plot({
-  marks: [
-    Plot.barY(transpose(mydata), {
-      x: "x",
-      y: "y"
-    })
-  ]
-})
+```{r}
+unzip("./data/2021_GCP_AUS_for_AUS_short-header.zip",  exdir = "data/gcp_aus")
 ```
 
-Great!
+
+```{r}
+mh19a <- read_csv("data/gcp_aus/2021 Census GCP Australia for AUS/2021Census_G19A_AUS_AUS.csv")
+mh19b <- read_csv("data/gcp_aus/2021 Census GCP Australia for AUS/2021Census_G19B_AUS_AUS.csv")
+mh19c <- read_csv("data/gcp_aus/2021 Census GCP Australia for AUS/2021Census_G19C_AUS_AUS.csv")
+```
+
+
+```{r}
+pretty_symmetric <- function(range, n = 10) {
+    range_1 <- c(-range[1], range[2])
+    range_2 <- c(range[1], -range[2])
+
+    pretty_vec_1 <- pretty(range_1)
+    pretty_vec_2 <- pretty(range_2)
+
+    pretty(
+        c(pretty_vec_1, pretty_vec_2),
+        n = n
+    )
+}
+
+mh <- bind_cols(mh19a, mh19b, mh19c) |>
+    select(
+        AUS_CODE_2021 = AUS_CODE_2021...1,
+        contains(c("M_Mental", "F_Mental", "M_Tot", "F_Tot")),
+        -M_Mental_health_cond_Tot,
+        -F_Mental_health_cond_Tot,
+        -F_Tot_Tot,
+        -M_Tot_Tot
+    ) |>
+    pivot_longer(-AUS_CODE_2021,
+        names_to = "cat"
+    ) |>
+    separate_wider_regex(cat,
+        patterns = c(gender = ".", cond = "_.+", age = "(?<=_)[0-9]+_.+$"),
+        too_few = "align_start"
+    ) |>
+    pivot_wider(names_from = cond) |>
+    rename(
+        condition = `_Mental_health_cond_`,
+        total = `_Tot_`
+    ) |>
+    mutate(
+        condition = ifelse(gender == "M", condition * -1, condition),
+        age = fct_rev(age)
+    )
+
+```
+
+
+```{r}
+ggplot(mh, aes(condition, age, col = gender, fill = gender)) +
+    geom_col() +
+    scale_x_continuous(
+        breaks = pretty_symmetric(range(mh$condition)),
+        labels = abs(pretty_symmetric(range(mh$condition)))
+    ) +
+    expand_limits(x = pretty_symmetric(range(mh$condition)))
+```
+
+
+# Mental Health Map  
+
+```{r}
+library(tidyverse)
+library(sf)
+library(mapview)
+library(sfdep)
+```
+
+```{r}
+# unzip("data/Geopackage_2021_G19_AUST_GDA2020.zip", exdir = "data/spatial")
+```
+
+```{r}
+mh2 <- sf::read_sf("data/spatial/G19B_AUST_GDA2020.gpkg", layer = "G19B_SA3_2021_AUST")
+mh3 <- sf::read_sf("data/spatial/G19C_AUST_GDA2020.gpkg", layer = "G19C_SA3_2021_AUST")
+mh_all <- cbind(mh2, mh3)
+```
+
+
+```{r}
+mh_dat <- mh_all |>
+    st_drop_geometry() |>
+    as_tibble()  |>
+    select(
+        SA3_CODE_2021,
+        contains(c("P_Mental", "P_Tot")),
+        -P_Tot_Tot,
+        -P_Mental_health_cond_Tot
+    ) |>
+    pivot_longer(-c(SA3_CODE_2021),
+        names_to = "cat"
+    ) |>
+    separate_wider_regex(cat,
+        patterns = c(cond = "P_.+", age = "(?<=_)[0-9]+_.+$"),
+        too_few = "align_start"
+    ) |>
+    pivot_wider(names_from = cond) |>
+    rename(
+        condition = P_Mental_health_cond_,
+        total = P_Tot_
+    ) |>
+    mutate(
+        prop = condition / total,
+        prop = replace_na(prop, 0),
+        prop = ifelse(condition > total, 1, prop)
+    )  |>
+    filter(age == "15_24")
+
+
+mh_map <- mh_all |>
+    select(SA3_CODE_2021, SA3_NAME_2021, geom) |>
+    inner_join(mh_dat)  |>
+    as_tibble()  |>
+    st_as_sf()
+
+```
+
+
+```{r}
+mapview(mh_map, zcol = "prop")
+```
+
+
+```{r}
+st_is_empty(mh_map)
+
+non_empty <- mh_map |>
+    filter(
+        !st_is_empty(geom)
+    ) # check this
+
+has_nb <- non_empty |>
+    mutate(nb = st_contiguity(geom)) |>
+    slice(which(map_int(nb, \(x) sum(x)) != 0))
+
+mh_wts <- has_nb |>
+    mutate(
+        nb = st_contiguity(geom),
+        wt = st_weights(nb)
+    )
+
+mh_moran <- mh_wts |>
+    mutate(
+        local_moran = local_moran(prop, nb, wt, nsim = 199),
+    ) |>
+    tidyr::unnest(local_moran) |>
+    mutate(mean = ifelse(p_folded_sim <= 0.05, as.character(mean), NA))
+
+out <- ggplot(mh_moran, aes(fill = mean)) +
+    geom_sf() +
+    theme_void()
+
+plotly::ggplotly(out)
+```
+
+
+```{r}
+mh_moran  |>
+select(SA3_NAME_2021, prop, mean)  |>
+mapview(zcol = "mean")
+```
