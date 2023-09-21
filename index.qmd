@@ -6,25 +6,46 @@ format: html
 
 # Mental Health Conditions by Age & Gender  
 
+Setup and load packages. 
+
 ```{r}
 library(tidyverse)
+library(themes360info)  #360Info internal package: `remotes::install_github("360-info/themes360info")` 
 ```
 
+## Import Data  
+
+Download and unzip data. For more information see `data/README.md`.  
 
 ```{r}
-unzip("./data/2021_GCP_AUS_for_AUS_short-header.zip",  exdir = "data/gcp_aus")
+# download.file("https://www.abs.gov.au/census/find-census-data/datapacks/download/2021_GCP_AUS_for_AUS_short-header.zip",
+#     destfile = "data/ABS_Aus_2021.zip"
+# )
+
+# unzip("data/ABS_Aus_2021.zip", exdir = "data/ABS_Aus_2021")
 ```
 
+Read in the relevant table from the ABS GCP datasets. Table 19 in the GCP is around long term health conditions. 
+It is split across three csv files (A, B, C).  
 
 ```{r}
-mh19a <- read_csv("data/gcp_aus/2021 Census GCP Australia for AUS/2021Census_G19A_AUS_AUS.csv")
-mh19b <- read_csv("data/gcp_aus/2021 Census GCP Australia for AUS/2021Census_G19B_AUS_AUS.csv")
-mh19c <- read_csv("data/gcp_aus/2021 Census GCP Australia for AUS/2021Census_G19C_AUS_AUS.csv")
+mh19a <- read_csv("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19A_AUS_AUS.csv")
+mh19b <- read_csv("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19B_AUS_AUS.csv")
+mh19c <- read_csv("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19C_AUS_AUS.csv")
 ```
 
+## Data Processing  
+
+Extracting Male and Female Mental Health data, and population totals.  
+
+Pivoting wider and separating out the ABS column names to decompose gender and age .  
+
+I have calculated *_directional columns to allow plotting like a symmetric age pyramid.  
 
 ```{r}
-pretty_symmetric <- function(range, n = 10) {
+
+# This is a helper function for the symmetric bar plot
+pretty_symmetric <- function(range, n = 5) {
     range_1 <- c(-range[1], range[2])
     range_2 <- c(range[1], -range[2])
 
@@ -37,6 +58,7 @@ pretty_symmetric <- function(range, n = 10) {
     )
 }
 
+# data processing pipeline
 mh <- bind_cols(mh19a, mh19b, mh19c) |>
     select(
         AUS_CODE_2021 = AUS_CODE_2021...1,
@@ -59,21 +81,64 @@ mh <- bind_cols(mh19a, mh19b, mh19c) |>
         total = `_Tot_`
     ) |>
     mutate(
-        condition = ifelse(gender == "M", condition * -1, condition),
-        age = fct_rev(age)
+        age = str_replace(age, "_", "-"),
+        gender = fct_recode(gender, Female = "F", Male = "M"),
+        alpha_channel = ifelse(age %in% c("15-24", "0-14", "25-34"), 0.8, 0.6)
+    ) |>
+    mutate(
+        age = fct_rev(age),
+        condition_directional = ifelse(gender == "Male", condition * -1, condition),
+        proportion = condition / total,
+        proportion_directional = ifelse(gender == "Male", proportion * -1, proportion)
     )
 
 ```
 
 
+## Plot  
+
+Showing symmetric age pyramid, split by gender for Mental Health prevalance. 
+
+This version shows **count of persons**  
+
 ```{r}
-ggplot(mh, aes(condition, age, col = gender, fill = gender)) +
+abs_plot_1 <- ggplot(mh, aes(condition_directional, age, fill = gender)) +
+    geom_col(aes(alpha = alpha_channel)) +
+    scale_x_continuous(
+        breaks = pretty_symmetric(range(mh$condition_directional)),
+        labels = scales::comma(abs(pretty_symmetric(range(mh$condition_directional))))
+    ) +
+    expand_limits(x = pretty_symmetric(range(mh$condition_directional))) +
+    scale_fill_manual(values = c("#36a7e9", "#2d3494"))+
+    scale_alpha(range = c(0.6, 1)) +
+    guides(alpha = "none") +
+    themes360info::theme_360() +
+    labs(
+        title = "Persons with a mental health condition",
+        subtitle = "Has been told by a doctor or nurse that they have a **mental health condition**<br>*(including depression or anxiety)*",
+        caption = "**Source**: Based on Australian Bureau of Statistics data.",
+        x = "Count of Persons",
+        y = "Age",
+        fill = "Gender"
+    ) +
+    annotate_360_lightblue(
+        x = 210000, y = 9.1, size = 3, 
+        label = "**Young people** make up a<br> large proprtion of overall sufferers<br> of mental health conditions.<br> **Females** are much more heavily impacted."
+    ) 
+
+save_360plot(abs_plot_1, "out/abs_plot_1.png", shape = "square")
+
+abs_plot_1
+```
+
+```{r}
+ggplot(mh, aes(proportion_directional, age, fill = gender)) +
     geom_col() +
     scale_x_continuous(
-        breaks = pretty_symmetric(range(mh$condition)),
-        labels = abs(pretty_symmetric(range(mh$condition)))
+        breaks = pretty_symmetric(range(mh$proportion_directional)),
+        labels = abs(pretty_symmetric(range(mh$proportion_directional)))
     ) +
-    expand_limits(x = pretty_symmetric(range(mh$condition)))
+    expand_limits(x = pretty_symmetric(range(mh$proportion_directional))) 
 ```
 
 
@@ -91,8 +156,8 @@ library(sfdep)
 ```
 
 ```{r}
-mh2 <- sf::read_sf("data/spatial/G19B_AUST_GDA2020.gpkg", layer = "G19B_SA3_2021_AUST")
-mh3 <- sf::read_sf("data/spatial/G19C_AUST_GDA2020.gpkg", layer = "G19C_SA3_2021_AUST")
+mh2 <- sf::read_sf("data/spatial/G19B_AUST_GDA2020.gpkg", layer = "G19B_SA2_2021_AUST")
+mh3 <- sf::read_sf("data/spatial/G19C_AUST_GDA2020.gpkg", layer = "G19C_SA2_2021_AUST")
 mh_all <- cbind(mh2, mh3)
 ```
 
@@ -102,12 +167,12 @@ mh_dat <- mh_all |>
     st_drop_geometry() |>
     as_tibble()  |>
     select(
-        SA3_CODE_2021,
+        SA2_CODE_2021,
         contains(c("P_Mental", "P_Tot")),
         -P_Tot_Tot,
         -P_Mental_health_cond_Tot
     ) |>
-    pivot_longer(-c(SA3_CODE_2021),
+    pivot_longer(-c(SA2_CODE_2021),
         names_to = "cat"
     ) |>
     separate_wider_regex(cat,
@@ -128,36 +193,42 @@ mh_dat <- mh_all |>
 
 
 mh_map <- mh_all |>
-    select(SA3_CODE_2021, SA3_NAME_2021, geom) |>
+    select(SA2_CODE_2021, SA2_NAME_2021, geom) |>
     inner_join(mh_dat)  |>
     as_tibble()  |>
     st_as_sf()
 
 ```
 
-
 ```{r}
-mapview(mh_map, zcol = "prop")
+# mapview(mh_map, zcol = "prop")
 ```
 
 
 ```{r}
-st_is_empty(mh_map)
-
-non_empty <- mh_map |>
+has_nb <- mh_map |>
     filter(
         !st_is_empty(geom)
-    ) # check this
-
-has_nb <- non_empty |>
+    ) |>
     mutate(nb = st_contiguity(geom)) |>
     slice(which(map_int(nb, \(x) sum(x)) != 0))
+
 
 mh_wts <- has_nb |>
     mutate(
         nb = st_contiguity(geom),
         wt = st_weights(nb)
     )
+
+mh_wts |>
+    st_drop_geometry() |>
+    mutate(lag = st_lag(prop, nb, wt)) |>
+    ggplot(aes(prop, lag)) +
+    geom_point() +
+    geom_vline(aes(xintercept = median(prop)), lty = 2) +
+    geom_hline(aes(yintercept = median(lag)), lty = 2) +
+    geom_smooth(method = "lm")
+
 
 mh_moran <- mh_wts |>
     mutate(
@@ -166,16 +237,44 @@ mh_moran <- mh_wts |>
     tidyr::unnest(local_moran) |>
     mutate(mean = ifelse(p_folded_sim <= 0.05, as.character(mean), NA))
 
+
+
+
+```
+
+```{r}
 out <- ggplot(mh_moran, aes(fill = mean)) +
     geom_sf() +
-    theme_void()
-
+    theme_void() 
 plotly::ggplotly(out)
+```
+
+```{r}
+
+
+hh <- mh_moran  |>
+filter(mean == "High-High")
+
+mapviewOptions(fgb = FALSE)
+
+    map <- leaflet(hh) |>
+        leaflet::addProviderTiles(providers$CartoDB.Positron)
+
+    mout <- mapview(hh, map = map)
+
+    mapshot(mout, file = "test.png")
 ```
 
 
 ```{r}
+p <- function (n) {
+    grDevices::hcl.colors(n, palette = "viridis", rev = T)
+}
+
+
 mh_moran  |>
-select(SA3_NAME_2021, prop, mean)  |>
-mapview(zcol = "mean")
+select(SA2_NAME_2021, condition, total, prop, mean)  |>
+mapview(zcol = "mean", viewer.suppress = TRUE)
+
+
 ```

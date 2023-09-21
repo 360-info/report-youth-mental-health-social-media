@@ -17,7 +17,7 @@ Thumbs.db
 
 # output folder (you may want to exclude files when we publish!)
 /out/*
-!/out
+!/out/abs_plot_1.png
 
 # data folder 
 /data/*
