@@ -1,0 +1,14 @@
+{
+  "hash": "8bdfe6fdd7fbb155c0559c5d463b44fd",
+  "result": {
+    "markdown": "---\ntitle: Untitled\nsubtitle: A slightly longer title\nformat:\n  360-analysis-html: default\nauthor: James Goldie\ndate: last-modified\ncode-fold: true\n---\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(here)\n```\n\n::: {.cell-output .cell-output-stderr}\n```\nhere() starts at /home/wavedatalabs/Documents/wd/report-youth-mental-health-social-media\n```\n:::\n\n```{.r .cell-code}\nif (!file.exists(here(\"data/ABS_Aus_2021.zip\"))) {\n\n    download.file(\"https://www.abs.gov.au/census/find-census-data/datapacks/download/2021_GCP_AUS_for_AUS_short-header.zip\",\n        destfile = here(\"data/ABS_Aus_2021.zip\")\n    )\n\n    unzip(here(\"data/ABS_Aus_2021.zip\"), exdir = here(\"data/ABS_Aus_2021\"))\n}\n```\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

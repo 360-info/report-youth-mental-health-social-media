@@ -1,0 +1,132 @@
+---
+title: Untitled
+subtitle: A slightly longer title
+format:
+  360-analysis-html: default
+author: James Goldie
+date: last-modified
+code-fold: true
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(sfdep)
+library(here)
+```
+
+# Data Import 
+
+Download Australia level Geopackage from ABS. For more info see `data/README.md`
+
+Note: This will check if the file exists before downloading as its ~2.1GB zipped.  
+
+```{r}
+if (!file.exists(here("data/ABS_Geo_2021.zip"))) {
+
+    download.file(here("https://www.abs.gov.au/census/find-census-data/geopackages/download/Geopackage_2021_G19_AUST_GDA2020.zip"),
+        destfile = here("data/ABS_Geo_2021.zip"), method = "curl"
+    )
+
+    unzip(here("data/ABS_Geo_2021.zip"), exdir = here("data/ABS_Geo_2021"))
+}
+```
+
+The health tables are covered in table 19 of the geopackage. This is split across three files, A, B & C.
+We only need files B and C for this analysis.  Combining together.  
+
+```{r}
+# Extracting SA2 layers 
+mh2 <- sf::read_sf(here("data/ABS_Geo_2021/G19B_AUST_GDA2020.gpkg"), layer = "G19B_SA2_2021_AUST")
+mh3 <- sf::read_sf(here("data/ABS_Geo_2021/G19C_AUST_GDA2020.gpkg"), layer = "G19C_SA2_2021_AUST")
+mh_all <- cbind(mh2, mh3)
+```
+
+## Data Processing 
+
+Selecting only the 15-24 year age group, and selecting Persons (not Male/Female).  
+
+```{r}
+mh_dat <- mh_all |>
+    st_drop_geometry() |>
+    as_tibble()  |>
+    select(
+        SA2_CODE_2021,
+        contains(c("P_Mental", "P_Tot")),
+        -P_Tot_Tot,
+        -P_Mental_health_cond_Tot
+    ) |>
+    pivot_longer(-c(SA2_CODE_2021),
+        names_to = "cat"
+    ) |>
+    separate_wider_regex(cat,
+        patterns = c(cond = "P_.+", age = "(?<=_)[0-9]+_.+$"),
+        too_few = "align_start"
+    ) |>
+    pivot_wider(names_from = cond) |>
+    rename(
+        condition = P_Mental_health_cond_,
+        total = P_Tot_
+    ) |>
+    mutate(
+        prop = condition / total,
+        prop = replace_na(prop, 0)
+    )  |>
+    filter(age == "15_24")
+
+
+mh_map <- mh_all |>
+    select(SA2_CODE_2021, SA2_NAME_2021, geom) |>
+    inner_join(mh_dat)  |>
+    as_tibble()  |>
+    st_as_sf()
+
+```
+
+Computing neighborhood network and weights. 
+
+```{r}
+mh_wts <- mh_map |>
+    filter(
+        !st_is_empty(geom) # removing offshore / shipping / no address
+    ) |>
+    mutate(
+        nb = st_contiguity(geom),
+        wt = st_weights(nb, allow_zero = TRUE)
+    )
+```
+
+Calculating spatials lags and Local Morans-I 
+
+```{r}
+ mh_moran <- mh_wts |>
+    mutate(
+        prop_lag = st_lag(prop, nb, wt, allow_zero = TRUE),
+        local_moran = local_moran(prop, nb, wt, nsim = 199, zero.policy = TRUE),
+    ) |>
+    tidyr::unnest(local_moran) |>
+    select(-nb, -wt)  |>
+    filter(ii != 0)  |> # removes polygons with no neighbours i.e. islands
+    mutate(
+        mean = ifelse(p_folded_sim <= 0.1 & (mean == "High-High"), as.character(mean), NA),
+        alpha_channel = ifelse(is.na(mean), 0.4, 1)
+        )  |>
+        mutate(state = case_when(
+            str_extract(SA2_CODE_2021, "^.") == 1 ~ "NSW/ACT",
+            str_extract(SA2_CODE_2021, "^.") == 2 ~ "VIC",
+            str_extract(SA2_CODE_2021, "^.") == 3 ~ "QLD",
+            str_extract(SA2_CODE_2021, "^.") == 4 ~ "SA",
+            str_extract(SA2_CODE_2021, "^.") == 5 ~ "WA",
+            str_extract(SA2_CODE_2021, "^.") == 6 ~ "TAS",
+            str_extract(SA2_CODE_2021, "^.") == 7 ~ "NT",
+            str_extract(SA2_CODE_2021, "^.") == 8 ~ "NSW/ACT",
+            str_extract(SA2_CODE_2021, "^.") == 9 ~ "NSW/ACT",
+        TRUE ~ NA))
+
+```
+
+# Data Export  
+
+```{r}
+sf::write_sf(mh_moran, here("data/final/mental_health_hotspot.geojson"))
+```

@@ -3,100 +3,11 @@ title: "Youth Mental Health & Social Media"
 author: "Dean Marchiori"
 format: html
 ---
-
-# Mental Health Conditions by Age & Gender  
-
-Setup and load packages. 
-
 ```{r}
 library(tidyverse)
+library(here)
 library(themes360info)  #360Info internal package: `remotes::install_github("360-info/themes360info")` 
 ```
-
-## Import Data  
-
-Download and unzip data. For more information see `data/README.md`.  
-
-```{r}
-if (!file.exists("data/ABS_Aus_2021.zip")) {
-
-    download.file("https://www.abs.gov.au/census/find-census-data/datapacks/download/2021_GCP_AUS_for_AUS_short-header.zip",
-        destfile = "data/ABS_Aus_2021.zip"
-    )
-
-    unzip("data/ABS_Aus_2021.zip", exdir = "data/ABS_Aus_2021")
-}
-```
-
-Read in the relevant table from the ABS GCP datasets. Table 19 in the GCP is around long term health conditions. 
-It is split across three csv files (A, B, C).  
-
-```{r}
-mh19a <- read_csv("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19A_AUS_AUS.csv")
-mh19b <- read_csv("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19B_AUS_AUS.csv")
-mh19c <- read_csv("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19C_AUS_AUS.csv")
-```
-
-## Data Processing  
-
-Extracting Male and Female Mental Health data, and population totals.  
-
-Pivoting wider and separating out the ABS column names to decompose gender and age .  
-
-I have calculated *_directional columns to allow plotting like a symmetric age pyramid.  
-
-```{r}
-
-# This is a helper function for the symmetric bar plot
-pretty_symmetric <- function(range, n = 5) {
-    range_1 <- c(-range[1], range[2])
-    range_2 <- c(range[1], -range[2])
-
-    pretty_vec_1 <- pretty(range_1)
-    pretty_vec_2 <- pretty(range_2)
-
-    pretty(
-        c(pretty_vec_1, pretty_vec_2),
-        n = n
-    )
-}
-
-# data processing pipeline
-mh <- bind_cols(mh19a, mh19b, mh19c) |>
-    select(
-        AUS_CODE_2021 = AUS_CODE_2021...1,
-        contains(c("M_Mental", "F_Mental", "M_Tot", "F_Tot")),
-        -M_Mental_health_cond_Tot,
-        -F_Mental_health_cond_Tot,
-        -F_Tot_Tot,
-        -M_Tot_Tot
-    ) |>
-    pivot_longer(-AUS_CODE_2021,
-        names_to = "cat"
-    ) |>
-    separate_wider_regex(cat,
-        patterns = c(gender = ".", cond = "_.+", age = "(?<=_)[0-9]+_.+$"),
-        too_few = "align_start"
-    ) |>
-    pivot_wider(names_from = cond) |>
-    rename(
-        condition = `_Mental_health_cond_`,
-        total = `_Tot_`
-    ) |>
-    mutate(
-        age = str_replace(age, "_", "-"),
-        gender = fct_recode(gender, Female = "F", Male = "M"),
-        alpha_channel = ifelse(age %in% c("15-24", "0-14", "25-34"), 0.8, 0.6)
-    ) |>
-    mutate(
-        age = fct_rev(age),
-        condition_directional = ifelse(gender == "Male", condition * -1, condition),
-        proportion = condition / total,
-        proportion_directional = ifelse(gender == "Male", proportion * -1, proportion)
-    )
-
-```
-
 
 ## Plot  
 
@@ -105,6 +16,8 @@ Showing symmetric age pyramid, split by gender for Mental Health prevalance.
 This version shows **count of persons**  
 
 ```{r}
+mh <- read_csv(here("data/final/mental_health_census.csv"))
+
 abs_plot_1 <- ggplot(mh, aes(condition_directional, age, fill = gender)) +
     geom_col(aes(alpha = alpha_channel)) +
     scale_x_continuous(
@@ -178,117 +91,13 @@ Loading required packages
 library(tidyverse)
 library(sf)
 library(mapview)
-library(sfdep)
 library(patchwork)
 ```
 
-# Data Import 
-
-Download Australia level Geopackage from ABS. For more info see `data/README.md`
-
-Note: This will check if the file exists before downloading as its ~2.1GB zipped.  
+Read in data
 
 ```{r}
-if (!file.exists("data/ABS_Geo_2021.zip")) {
-
-    download.file("https://www.abs.gov.au/census/find-census-data/geopackages/download/Geopackage_2021_G19_AUST_GDA2020.zip",
-        destfile = "data/ABS_Geo_2021.zip", method = "curl"
-    )
-
-    unzip("data/ABS_Geo_2021.zip", exdir = "data/ABS_Geo_2021")
-}
-```
-
-The health tables are covered in table 19 of the geopackage. This is split across three files, A, B & C.
-We only need files B and C for this analysis.  Combining together.  
-
-```{r}
-# Extracting SA2 layers 
-mh2 <- sf::read_sf("data/ABS_Geo_2021/G19B_AUST_GDA2020.gpkg", layer = "G19B_SA2_2021_AUST")
-mh3 <- sf::read_sf("data/ABS_Geo_2021/G19C_AUST_GDA2020.gpkg", layer = "G19C_SA2_2021_AUST")
-mh_all <- cbind(mh2, mh3)
-```
-
-## Data Processing 
-
-Selecting only the 15-24 year age group, and selecting Persons (not Male/Female).  
-
-```{r}
-mh_dat <- mh_all |>
-    st_drop_geometry() |>
-    as_tibble()  |>
-    select(
-        SA2_CODE_2021,
-        contains(c("P_Mental", "P_Tot")),
-        -P_Tot_Tot,
-        -P_Mental_health_cond_Tot
-    ) |>
-    pivot_longer(-c(SA2_CODE_2021),
-        names_to = "cat"
-    ) |>
-    separate_wider_regex(cat,
-        patterns = c(cond = "P_.+", age = "(?<=_)[0-9]+_.+$"),
-        too_few = "align_start"
-    ) |>
-    pivot_wider(names_from = cond) |>
-    rename(
-        condition = P_Mental_health_cond_,
-        total = P_Tot_
-    ) |>
-    mutate(
-        prop = condition / total,
-        prop = replace_na(prop, 0)
-    )  |>
-    filter(age == "15_24")
-
-
-mh_map <- mh_all |>
-    select(SA2_CODE_2021, SA2_NAME_2021, geom) |>
-    inner_join(mh_dat)  |>
-    as_tibble()  |>
-    st_as_sf()
-
-```
-
-Computing neighborhood network and weights. 
-
-```{r}
-mh_wts <- mh_map |>
-    filter(
-        !st_is_empty(geom) # removing offshore / shipping / no address
-    ) |>
-    mutate(
-        nb = st_contiguity(geom),
-        wt = st_weights(nb, allow_zero = TRUE)
-    )
-```
-
-Calculating spatials lags and Local Morans-I 
-
-```{r}
- mh_moran <- mh_wts |>
-    mutate(
-        prop_lag = st_lag(prop, nb, wt, allow_zero = TRUE),
-        local_moran = local_moran(prop, nb, wt, nsim = 199, zero.policy = TRUE),
-    ) |>
-    tidyr::unnest(local_moran) |>
-    filter(ii != 0)  |> # removes polygons with no neighbours i.e. islands
-    mutate(
-        mean = ifelse(p_folded_sim <= 0.1 & (mean == "High-High"), as.character(mean), NA),
-        alpha_channel = ifelse(is.na(mean), 0.4, 1)
-        )  |>
-        mutate(state = case_when(
-            str_extract(SA2_CODE_2021, "^.") == 1 ~ "NSW/ACT",
-            str_extract(SA2_CODE_2021, "^.") == 2 ~ "VIC",
-            str_extract(SA2_CODE_2021, "^.") == 3 ~ "QLD",
-            str_extract(SA2_CODE_2021, "^.") == 4 ~ "SA",
-            str_extract(SA2_CODE_2021, "^.") == 5 ~ "WA",
-            str_extract(SA2_CODE_2021, "^.") == 6 ~ "TAS",
-            str_extract(SA2_CODE_2021, "^.") == 7 ~ "NT",
-            str_extract(SA2_CODE_2021, "^.") == 8 ~ "NSW/ACT",
-            str_extract(SA2_CODE_2021, "^.") == 9 ~ "NSW/ACT",
-        TRUE ~ NA))
-
+mh_moran <- sf::read_sf(here("data/final/mental_health_hotspot.geojson"))
 ```
 
 visualise lags vs actuals 
