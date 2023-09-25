@@ -51,20 +51,6 @@ Pivoting wider and separating out the ABS column names to decompose gender and a
 I have calculated *_directional columns to allow plotting like a symmetric age pyramid.  
 
 ```{r}
-# This is a helper function for the symmetric bar plot
-pretty_symmetric <- function(range, n = 5) {
-    range_1 <- c(-range[1], range[2])
-    range_2 <- c(range[1], -range[2])
-
-    pretty_vec_1 <- pretty(range_1)
-    pretty_vec_2 <- pretty(range_2)
-
-    pretty(
-        c(pretty_vec_1, pretty_vec_2),
-        n = n
-    )
-}
-
 # data processing pipeline
 mh <- bind_cols(mh19a, mh19b, mh19c) |>
     select(

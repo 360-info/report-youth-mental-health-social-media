@@ -2,12 +2,20 @@
 title: "Youth Mental Health & Social Media"
 author: "Dean Marchiori"
 format: html
+execute:
+  echo: true
+  warning: false
+  message: false
 ---
 ```{r}
 library(tidyverse)
 library(here)
 library(themes360info)  #360Info internal package: `remotes::install_github("360-info/themes360info")` 
+library(sf)
+library(mapdeck)
+library(glue)
 ```
+
 
 ## Plot  
 
@@ -16,7 +24,24 @@ Showing symmetric age pyramid, split by gender for Mental Health prevalance.
 This version shows **count of persons**  
 
 ```{r}
+#| fig-height: 8
+#| fig-width: 8
+
 mh <- read_csv(here("data/final/mental_health_census.csv"))
+
+# This is a helper function for the symmetric bar plot
+pretty_symmetric <- function(range, n = 5) {
+    range_1 <- c(-range[1], range[2])
+    range_2 <- c(range[1], -range[2])
+
+    pretty_vec_1 <- pretty(range_1)
+    pretty_vec_2 <- pretty(range_2)
+
+    pretty(
+        c(pretty_vec_1, pretty_vec_2),
+        n = n
+    )
+}
 
 abs_plot_1 <- ggplot(mh, aes(condition_directional, age, fill = gender)) +
     geom_col(aes(alpha = alpha_channel)) +
@@ -42,7 +67,7 @@ abs_plot_1 <- ggplot(mh, aes(condition_directional, age, fill = gender)) +
         label = "**Young people** make up a<br> large proprtion of overall sufferers<br> of mental health conditions.<br> **Females** are much more heavily impacted."
     ) 
 
-save_360plot(abs_plot_1, "out/abs_plot_1.png", shape = "square")
+save_360plot(abs_plot_1, here("out/img/abs_plot_1.png"), shape = "square")
 
 abs_plot_1
 ```
@@ -53,6 +78,9 @@ This version shows **Proportion of persons**
 
 
 ```{r}
+#| fig-height: 8
+#| fig-width: 8
+
 abs_plot_2 <- ggplot(mh, aes(proportion_directional, age, fill = gender)) +
     geom_col(aes(alpha = alpha_channel)) +
     scale_x_continuous(
@@ -77,22 +105,13 @@ abs_plot_2 <- ggplot(mh, aes(proportion_directional, age, fill = gender)) +
         label = "A high proportion of persons in **Youth** age <br>groups suffer from mental health conditions.<br> **Females** are much more heavily impacted."
     ) 
 
-save_360plot(abs_plot_2, "out/abs_plot_2.png", shape = "square")
+save_360plot(abs_plot_2, here("out/img/abs_plot_2.png"), shape = "square")
 
 abs_plot_2
 ```
 
 
 # Mental Health Map  
-
-Loading required packages 
-
-```{r}
-library(tidyverse)
-library(sf)
-library(mapview)
-library(patchwork)
-```
 
 Read in data
 
@@ -103,6 +122,8 @@ mh_moran <- sf::read_sf(here("data/final/mental_health_hotspot.geojson"))
 visualise lags vs actuals 
 
 ```{r}
+#| eval: false 
+
 ggplot(mh_moran, aes(prop, prop_lag)) +
     geom_point() +
     geom_vline(aes(xintercept = mean(prop)), lty = 2) +
@@ -113,6 +134,7 @@ ggplot(mh_moran, aes(prop, prop_lag)) +
 Produce graphic 
 
 ```{r}
+#| eval: false
 state_data <- mh_moran |>
     select(state, mean, alpha_channel) |>
     group_split(state)
@@ -144,9 +166,58 @@ themes360info::save_360plot(x, "out/hot_spot.png")
 
 ::: {.panel-tabset}
 
+```{r}
+poly_lay <- mh_moran |>
+    sf::st_transform(4326) |>
+    select(SA2_NAME_2021, mean, state, total, prop, prop_lag) |>
+    filter(!is.na(mean))  |>
+    mutate(tooltip = glue("Suburb: {SA2_NAME_2021}<br>Hot Spot<br>Mental Health Proportion (Ages 15-24): {round(prop, 2)}%<br>Surrounding Average: {round(prop_lag, 2)}%"))
+
+```
+
 # NSW 
 
+```{r}
+nsw <- poly_lay |>
+    filter(
+        state == "NSW/ACT"
+    )
+
+mapdeck() %>%
+    add_polygon(
+        data = nsw,
+        fill_colour = "prop",
+       # fill_opacity = "total",
+        elevation = "prop",
+        elevation_scale = 1000,
+        palette = "heat",
+        tooltip = "tooltip",
+        auto_highlight = TRUE,
+        legend = TRUE
+    )
+
+```
 
 # SA
 
+```{r}
+sa <- poly_lay |>
+    filter(state == "SA")
+
+mapdeck() %>%
+    add_polygon(
+        data = sa,
+        fill_colour = "prop",
+       # fill_opacity = "total",
+        elevation = "prop",
+        elevation_scale = 1000,
+        palette = "heat",
+        tooltip = "tooltip",
+        auto_highlight = TRUE,
+        legend = TRUE
+    )
+
+```
+
 :::
+
