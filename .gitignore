@@ -16,11 +16,11 @@ Thumbs.db
 /.quarto/
 
 # output folder (you may want to exclude files when we publish!)
-/out/*
-!/out/abs_plot_1.png
-!/out/abs_plot_2.png
-!/out/hot_spot.png
+/out/*  
+/out/img/*
 
 # data folder 
-/data/*
-!/data/final/mental_health_census.csv  
+data/*  
+!data/final
+data/final/*
+!/data/final/mental_health_census.csv

@@ -81,11 +81,14 @@ mh <- bind_cols(mh19a, mh19b, mh19c) |>
     mutate(
         Count = ifelse(gender == "Men", Count * -1, Count),
         Proportion = Count / total
-    )  |>
-    select(-total, -AUS_CODE_2021, -age)  |>
-    pivot_longer(c(Count, Proportion), names_to = "Series")  |>
-    pivot_wider(names_from = gender, values_from = value)
-
+    ) |>
+    select(-total, -AUS_CODE_2021, -age) |>
+    pivot_longer(c(Count, Proportion), names_to = "Series") |>
+    pivot_wider(names_from = gender, values_from = value) |>
+    mutate(
+        Men_Tooltip = ifelse(Series == "Proportion", paste0(abs(round(Men * 100, 1)), "%"), abs(Men)),
+        Women_Tooltip = ifelse(Series == "Proportion", paste0(abs(round(Women * 100, 1)), "%"), abs(Women))
+    )
 ```
 
 # Data Export 
