@@ -70,20 +70,21 @@ mh <- bind_cols(mh19a, mh19b, mh19c) |>
     ) |>
     pivot_wider(names_from = cond) |>
     rename(
-        condition = `_Mental_health_cond_`,
+        Count = `_Mental_health_cond_`,
         total = `_Tot_`
     ) |>
     mutate(
-        age = str_replace(age, "_", "-"),
-        gender = fct_recode(gender, Female = "F", Male = "M"),
-        alpha_channel = ifelse(age %in% c("15-24", "0-14", "25-34"), 0.8, 0.6)
+        Age = str_replace(age, "_", "-"),
+        Age = fct_recode(Age, `85+` = "85-over"),
+        gender = fct_recode(gender, Women = "F", Men = "M"),
     ) |>
     mutate(
-        age = fct_rev(age),
-        condition_directional = ifelse(gender == "Male", condition * -1, condition),
-        proportion = condition / total,
-        proportion_directional = ifelse(gender == "Male", proportion * -1, proportion)
-    )
+        Count = ifelse(gender == "Men", Count * -1, Count),
+        Proportion = Count / total
+    )  |>
+    select(-total, -AUS_CODE_2021, -age)  |>
+    pivot_longer(c(Count, Proportion), names_to = "Series")  |>
+    pivot_wider(names_from = gender, values_from = value)
 
 ```
 

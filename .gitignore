@@ -23,4 +23,4 @@ Thumbs.db
 
 # data folder 
 /data/*
-!/data
+!/data/final/mental_health_census.csv  
