@@ -76,18 +76,18 @@ mh <- bind_cols(mh19a, mh19b, mh19c) |>
     mutate(
         Age = str_replace(age, "_", "-"),
         Age = fct_recode(Age, `85+` = "85-over"),
-        gender = fct_recode(gender, Women = "F", Men = "M"),
+        gender = fct_recode(gender, women = "F", men = "M"),
     ) |>
     mutate(
-        Count = ifelse(gender == "Men", Count * -1, Count),
+        Count = ifelse(gender == "men", Count * -1, Count),
         Proportion = Count / total
     ) |>
     select(-total, -AUS_CODE_2021, -age) |>
     pivot_longer(c(Count, Proportion), names_to = "Series") |>
     pivot_wider(names_from = gender, values_from = value) |>
     mutate(
-        Men_Tooltip = ifelse(Series == "Proportion", paste0(abs(round(Men * 100, 1)), "%"), abs(Men)),
-        Women_Tooltip = ifelse(Series == "Proportion", paste0(abs(round(Women * 100, 1)), "%"), abs(Women))
+        men_tooltip = ifelse(Series == "Proportion", paste0(abs(round(men * 100, 1)), "%"), abs(men)),
+        women_tooltip = ifelse(Series == "Proportion", paste0(abs(round(women * 100, 1)), "%"), abs(women))
     )
 ```
 

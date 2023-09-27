@@ -1,4 +1,4 @@
-Age,Series,Men,Women,Men_Tooltip,Women_Tooltip
+Age,Series,men,women,men_tooltip,women_tooltip
 0-14,Count,-52777,45762,52777,45762
 0-14,Proportion,-0.0221393406313133,0.0203012041778904,2.2%,2%
 15-24,Count,-114541,216513,114541,216513
