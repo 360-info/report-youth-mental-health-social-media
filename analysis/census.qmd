@@ -23,13 +23,13 @@ library(themes360info)  #360Info internal package: `remotes::install_github("360
 Download and unzip data. For more information see `./data/README.md`.  
 
 ```{r}
-if (!file.exists(here("data/ABS_Aus_2021.zip"))) {
+if (!file.exists(here("data/raw/ABS_Aus_2021.zip"))) {
 
     download.file("https://www.abs.gov.au/census/find-census-data/datapacks/download/2021_GCP_AUS_for_AUS_short-header.zip",
-        destfile = here("data/ABS_Aus_2021.zip")
+        destfile = here("data/raw/ABS_Aus_2021.zip")
     )
 
-    unzip(here("data/ABS_Aus_2021.zip"), exdir = here("data/ABS_Aus_2021"))
+    unzip(here("data/raw/ABS_Aus_2021.zip"), exdir = here("data/raw/ABS_Aus_2021"))
 }
 ```
 
@@ -37,9 +37,9 @@ Read in the relevant table from the ABS GCP datasets. Table 19 in the GCP is aro
 It is split across three csv files (A, B, C).  
 
 ```{r}
-mh19a <- read_csv(here("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19A_AUS_AUS.csv"))
-mh19b <- read_csv(here("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19B_AUS_AUS.csv"))
-mh19c <- read_csv(here("data/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19C_AUS_AUS.csv"))
+mh19a <- read_csv(here("data/raw/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19A_AUS_AUS.csv"))
+mh19b <- read_csv(here("data/raw/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19B_AUS_AUS.csv"))
+mh19c <- read_csv(here("data/raw/ABS_Aus_2021/2021 Census GCP Australia for AUS/2021Census_G19C_AUS_AUS.csv"))
 ```
 
 ## Data Processing  

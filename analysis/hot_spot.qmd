@@ -23,13 +23,13 @@ Download Australia level Geopackage from ABS. For more info see `data/README.md`
 Note: This will check if the file exists before downloading as its ~2.1GB zipped.  
 
 ```{r}
-if (!file.exists(here("data/ABS_Geo_2021.zip"))) {
+if (!file.exists(here("data/raw/ABS_Geo_2021.zip"))) {
 
     download.file(here("https://www.abs.gov.au/census/find-census-data/geopackages/download/Geopackage_2021_G19_AUST_GDA2020.zip"),
-        destfile = here("data/ABS_Geo_2021.zip"), method = "curl"
+        destfile = here("data/raw/ABS_Geo_2021.zip"), method = "curl"
     )
 
-    unzip(here("data/ABS_Geo_2021.zip"), exdir = here("data/ABS_Geo_2021"))
+    unzip(here("data/raw/ABS_Geo_2021.zip"), exdir = here("data/raw/ABS_Geo_2021"))
 }
 ```
 
@@ -38,8 +38,8 @@ We only need files B and C for this analysis.  Combining together.
 
 ```{r}
 # Extracting SA2 layers 
-mh2 <- sf::read_sf(here("data/ABS_Geo_2021/G19B_AUST_GDA2020.gpkg"), layer = "G19B_SA2_2021_AUST")
-mh3 <- sf::read_sf(here("data/ABS_Geo_2021/G19C_AUST_GDA2020.gpkg"), layer = "G19C_SA2_2021_AUST")
+mh2 <- sf::read_sf(here("data/raw/ABS_Geo_2021/G19B_AUST_GDA2020.gpkg"), layer = "G19B_SA2_2021_AUST")
+mh3 <- sf::read_sf(here("data/raw/ABS_Geo_2021/G19C_AUST_GDA2020.gpkg"), layer = "G19C_SA2_2021_AUST")
 mh_all <- cbind(mh2, mh3)
 ```
 
@@ -137,7 +137,11 @@ hot_spot_data <- mh_moran |>
 # Data Export  
 
 ```{r}
+if (file.exists(here("data/final/mental_health_hotspot.geojson"))) {
+    message("Please delete file first as it cannot be overwritten")
+} else{
 sf::st_write(hot_spot_data, here("data/final/mental_health_hotspot.geojson"), append = FALSE, delete_layer = TRUE)
+}
 ```
 
 
