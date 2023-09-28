@@ -63,11 +63,11 @@ mh <- bind_cols(mh19a, mh19b, mh19c) |>
     ) |>
     pivot_longer(-AUS_CODE_2021,
         names_to = "cat"
-    ) |>
+    ) |> 
     separate_wider_regex(cat,
         patterns = c(gender = ".", cond = "_.+", age = "(?<=_)[0-9]+_.+$"),
         too_few = "align_start"
-    ) |>
+    ) |> 
     pivot_wider(names_from = cond) |>
     rename(
         Count = `_Mental_health_cond_`,
@@ -79,15 +79,15 @@ mh <- bind_cols(mh19a, mh19b, mh19c) |>
         gender = fct_recode(gender, women = "F", men = "M"),
     ) |>
     mutate(
-        Count = ifelse(gender == "men", Count * -1, Count),
-        Proportion = Count / total
+        `Number of people` = ifelse(gender == "men", Count * -1, Count),
+        `Proportion of group` = `Number of people` / total
     ) |>
-    select(-total, -AUS_CODE_2021, -age) |>
-    pivot_longer(c(Count, Proportion), names_to = "Series") |>
+    select(-total, -AUS_CODE_2021, -age, -Count) |>
+    pivot_longer(c(`Number of people`, `Proportion of group`), names_to = "Series") |>
     pivot_wider(names_from = gender, values_from = value) |>
     mutate(
-        men_tooltip = ifelse(Series == "Proportion", paste0(abs(round(men * 100, 1)), "%"), abs(men)),
-        women_tooltip = ifelse(Series == "Proportion", paste0(abs(round(women * 100, 1)), "%"), abs(women))
+        men_tooltip = ifelse(Series == "Proportion of group", paste0(abs(round(men * 100, 1)), "%"), abs(men)),
+        women_tooltip = ifelse(Series == "Proportion of group", paste0(abs(round(women * 100, 1)), "%"), abs(women))
     )
 ```
 
