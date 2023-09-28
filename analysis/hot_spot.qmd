@@ -1,9 +1,9 @@
 ---
-title: Untitled
-subtitle: A slightly longer title
+title: Hot Spot Analysis of Mental Health Proportions
+subtitle: Utilising mental health prevalance in 15-24 year olds at ABS SA2 level
 format:
   360-analysis-html: default
-author: James Goldie
+author: Dean Marchiori
 date: last-modified
 code-fold: true
 ---
@@ -13,6 +13,7 @@ library(tidyverse)
 library(sf)
 library(sfdep)
 library(here)
+library(rmapshaper)
 ```
 
 # Data Import 
@@ -60,9 +61,8 @@ mh_dat <- mh_all |>
         names_to = "cat"
     ) |>
     separate_wider_regex(cat,
-        patterns = c(cond = "P_.+", age = "(?<=_)[0-9]+_.+$"),
-        too_few = "align_start"
-    ) |>
+        patterns = c(cond = "P_.+", age = "(?<=_)[0-9]+_.+$")
+    ) |> 
     pivot_wider(names_from = cond) |>
     rename(
         condition = P_Mental_health_cond_,
@@ -73,14 +73,16 @@ mh_dat <- mh_all |>
         prop = replace_na(prop, 0)
     )  |>
     filter(age == "15_24")
+```
 
+joining with spaital objects 
 
+```{r}
 mh_map <- mh_all |>
     select(SA2_CODE_2021, SA2_NAME_2021, geom) |>
     inner_join(mh_dat)  |>
     as_tibble()  |>
     st_as_sf()
-
 ```
 
 Computing neighborhood network and weights. 
@@ -92,7 +94,7 @@ mh_wts <- mh_map |>
     ) |>
     mutate(
         nb = st_contiguity(geom),
-        wt = st_weights(nb, allow_zero = TRUE)
+        wt = st_weights(nb, allow_zero = TRUE) # zero weights can occur from islands that have no neighbours with queen contiguity
     )
 ```
 
@@ -102,31 +104,40 @@ Calculating spatials lags and Local Morans-I
  mh_moran <- mh_wts |>
     mutate(
         prop_lag = st_lag(prop, nb, wt, allow_zero = TRUE),
-        local_moran = local_moran(prop, nb, wt, nsim = 199, zero.policy = TRUE),
+        local_moran = local_moran(prop, nb, wt, zero.policy = TRUE),
     ) |>
-    tidyr::unnest(local_moran) |>
-    select(-nb, -wt)  |>
-    filter(ii != 0)  |> # removes polygons with no neighbours i.e. islands
+    tidyr::unnest(local_moran)
+```
+
+prepare data for export 
+
+```{r}
+hot_spot_data <- mh_moran |>
     mutate(
-        mean = ifelse(p_folded_sim <= 0.1 & (mean == "High-High"), as.character(mean), NA),
-        alpha_channel = ifelse(is.na(mean), 0.4, 1)
-        )  |>
-        mutate(state = case_when(
-            str_extract(SA2_CODE_2021, "^.") == 1 ~ "NSW/ACT",
-            str_extract(SA2_CODE_2021, "^.") == 2 ~ "VIC",
-            str_extract(SA2_CODE_2021, "^.") == 3 ~ "QLD",
-            str_extract(SA2_CODE_2021, "^.") == 4 ~ "SA",
-            str_extract(SA2_CODE_2021, "^.") == 5 ~ "WA",
-            str_extract(SA2_CODE_2021, "^.") == 6 ~ "TAS",
-            str_extract(SA2_CODE_2021, "^.") == 7 ~ "NT",
-            str_extract(SA2_CODE_2021, "^.") == 8 ~ "NSW/ACT",
-            str_extract(SA2_CODE_2021, "^.") == 9 ~ "NSW/ACT",
-        TRUE ~ NA))
+        cluster = ifelse(p_folded_sim <= 0.05, as.character(mean), NA),
+        cluster = as.character(fct_recode(cluster,
+            `Hot Spot` = "High-High",
+            `Isolated Hot Spot` = "High-Low",
+            `Cold Spot` = "Low-Low",
+            `Isolated Cold Spot` = "Low-High"
+        )),
+        prop_tooltip = paste0(round(prop * 100, 1), "%"),
+        prop_lag_tooltip = paste0(round(prop_lag * 100, 1), "%")
+    ) |>
+    filter(
+        ii != 0, # removes polygons with no neighbours i.e. islands
+        !is.na(cluster) # removes polygons with not significant p value for morans I
+    ) |> 
+    select(SA2_CODE_2021, SA2_NAME_2021, age, condition, total, prop, prop_lag, cluster, prop_tooltip, prop_lag_tooltip) |>
+    rmapshaper::ms_simplify(keep_shapes = TRUE, keep = 0.10) 
 
 ```
+
 
 # Data Export  
 
 ```{r}
-sf::write_sf(mh_moran, here("data/final/mental_health_hotspot.geojson"))
+sf::st_write(hot_spot_data, here("data/final/mental_health_hotspot.geojson"), append = FALSE, delete_layer = TRUE)
 ```
+
+
