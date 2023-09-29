@@ -22,6 +22,23 @@ With direct download [link](https://www.abs.gov.au/census/find-census-data/geopa
 and renamed for readability. 
 
 The analysis scripts automatically download and unzip this file if it doesn't exist. 
+ 
+## `Data file Einstein.csv`  
+
+This is the survey data collected in the below publication on FoMO and social media usage in adolescence.  
+
+Danielle A. Einstein, Carol Dabb & Madeleine Fraser (2023) FoMO, but not self-compassion, moderates the link between social media use and anxiety in adolescence, Australian Journal of Psychology, 75:1, DOI: 10.1080/00049530.2023.2217961  
+
+The data underlying this article are available in the Macquarie University Repository and can be accessed with https://doi.org/10.25949/20188298.v1
+
+
+## `Variable labels Einstein.csv`  
+
+This is the labels for the survey data collected in the below publication on FoMO and social media usage in adolescence.  
+
+Danielle A. Einstein, Carol Dabb & Madeleine Fraser (2023) FoMO, but not self-compassion, moderates the link between social media use and anxiety in adolescence, Australian Journal of Psychology, 75:1, DOI: 10.1080/00049530.2023.2217961  
+
+The data underlying this article are available in the Macquarie University Repository and can be accessed with https://doi.org/10.25949/20188298.v1
 
 
 ## Processed data  
@@ -59,4 +76,9 @@ An analysis is performed to identify spatial clusters with LISA (Local Indicator
 |cluster          |character | Spatial cluster           |
 |prop_tooltip     |character | Formatted values for tooltip           |
 |prop_lag_tooltip |character | Formatted values for tooltip            |
+
+
+# FOMO 
+
+https://doi.org/10.25949/20188298.v1
 

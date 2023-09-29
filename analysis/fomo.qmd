@@ -1,0 +1,64 @@
+---
+title: Abbreviated FOMO and social media dataset
+subtitle: FoMO, but not self-compassion, moderates the link between social media use and anxiety in adolescence.   
+format:
+  360-analysis-html: default
+author: Dean Marchiori
+date: last-modified
+code-fold: true
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(themes360info)
+```
+
+From : Danielle A. Einstein, Carol Dabb & Madeleine Fraser (2023) FoMO, but not self-compassion, moderates the link between social media use and anxiety in adolescence, Australian Journal of Psychology, 75:1, DOI: 10.1080/00049530.2023.2217961  
+
+> Social media use is ubiquitous during adolescence, and emerging research suggests an association with anxiety symptoms in some individuals. Two psychological constructs which may moderate this relationship are Fear of Missing Out (FoMO) and self-compassion. Higher FoMO tendencies may exacerbate the link between social media use and anxiety symptoms through greater fixation on social comparison, whereas higher self-compassion may weaken this link. The purpose of this study was to examine whether FoMO and self-compassion independently moderate the relationship between social media use and anxiety symptoms in adolescents.  
+
+Read in the data from the study. For more info see `data/README.md`
+
+```{r}
+fomo <- read_csv(here("data/raw/Data file Einstein.csv"))
+```
+
+Adaptation of Figure 1 from the study.  
+
+```{r}
+lab <- str_wrap(c("Once a week or less", "Several times a week", "About 1-4 times per day", 
+        "About 5-10 times per day", "More than 10 times a day", "Constantly"), 10)
+
+fomo_plot <- fomo |>
+    select(SCAS_TOTAL_0, FoMO_Total, SM_0Reversed) |>
+    mutate(
+        fomo_hi_low = case_when(
+            FoMO_Total <= 10.2 ~ "Average to Low FoMO",
+            FoMO_Total >= 15.3 ~ "High FoMO"
+        )
+    ) |>
+    drop_na() |>
+    ggplot(aes(SM_0Reversed, SCAS_TOTAL_0, colour = fomo_hi_low)) +
+    geom_point(position = position_jitterdodge(), alpha = 0.4) +
+    geom_smooth(method = "lm", se = F) +
+    scale_y_sqrt() +
+    scale_x_continuous(breaks = 1:6, labels = lab) +
+    scale_color_manual(values = c("#36a7e9", "#2d3494")) +
+    themes360info::theme_360() +
+    theme(legend.position = "top",
+    axis.text.x = element_text(angle = 0, size = 10)) +
+    labs(
+        title = "Does fear of missing out increase anxiety\nin teens?",
+        subtitle = "Based on a study of 951 adolescents, **FoMO moderates the link** between social media use<br> and anxiety in adolescence. Those with <span style='color:#36a7e9'>lower levels of FoMO</span> benefit from increased social<br> media usage, while those with <span style='color:#2d3494'>higher levels of FoMO</span> experiemce more anxiety",
+        caption = "Source: Einstein et.al (2023)",
+        x = "Frequency of social media use",
+        y = "Anxiety symptoms",
+        colour = "Level of FoMO"
+    )
+
+fomo_plot
+
+save_360plot(fomo_plot, here("out/img/fomo.png"), shape = "square")
+
+```

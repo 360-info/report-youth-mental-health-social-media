@@ -17,7 +17,9 @@ Thumbs.db
 
 # output folder (you may want to exclude files when we publish!)
 /out/*  
-/out/img/*
+!/out/img/  
+/out/img/*  
+!/out/img/fomo.png
 
 # data folder 
 data/*  
