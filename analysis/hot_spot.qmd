@@ -75,6 +75,7 @@ mh_dat <- mh_all |>
     filter(age == "15_24")
 ```
 
+
 joining with spaital objects 
 
 ```{r}
@@ -122,14 +123,16 @@ hot_spot_data <- mh_moran |>
             `Isolated Cold Spot` = "Low-High"
         )),
         prop_tooltip = paste0(round(prop * 100, 1), "%"),
-        prop_lag_tooltip = paste0(round(prop_lag * 100, 1), "%")
+        prop_lag_tooltip = paste0(round(prop_lag * 100, 1), "%"),
+        notes = ifelse(total < 50, "Caution: 15-24 year old population less than 50 in this area.", "")
     ) |>
     filter(
         ii != 0, # removes polygons with no neighbours i.e. islands
         !is.na(cluster) # removes polygons with not significant p value for morans I
     ) |> 
-    select(SA2_CODE_2021, SA2_NAME_2021, age, condition, total, prop, prop_lag, cluster, prop_tooltip, prop_lag_tooltip) |>
-    rmapshaper::ms_simplify(keep_shapes = TRUE, keep = 0.10) 
+    select(SA2_CODE_2021, SA2_NAME_2021, age, condition, total, prop, prop_lag, cluster, prop_tooltip, prop_lag_tooltip, notes) |>
+    rmapshaper::ms_simplify(keep_shapes = TRUE, keep = 0.10)  |>
+    dplyr::select(SA2_CODE_2021, SA2_NAME_2021, age, condition, total, prop, prop_lag, cluster, prop_tooltip, prop_lag_tooltip, notes) 
 
 ```
 
@@ -143,5 +146,4 @@ if (file.exists(here("data/final/mental_health_hotspot.geojson"))) {
 sf::st_write(hot_spot_data, here("data/final/mental_health_hotspot.geojson"), append = FALSE, delete_layer = TRUE)
 }
 ```
-
 
