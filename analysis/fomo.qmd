@@ -27,8 +27,10 @@ fomo <- read_csv(here("data/raw/Data file Einstein.csv"))
 Adaptation of Figure 1 from the study.  
 
 ```{r}
-lab <- str_wrap(c("Once a week or less", "Several times a week", "About 1-4 times per day", 
-        "About 5-10 times per day", "More than 10 times a day", "Constantly"), 10)
+lab <- str_wrap(c(
+    "Once a week or less", "Several times a week", "About 1-4 times per day",
+    "About 5-10 times per day", "More than 10 times a day", "Constantly"
+), 10)
 
 fomo_plot <- fomo |>
     select(SCAS_TOTAL_0, FoMO_Total, SM_0Reversed) |>
@@ -44,14 +46,19 @@ fomo_plot <- fomo |>
     geom_smooth(method = "lm", se = F) +
     scale_y_sqrt() +
     scale_x_continuous(breaks = 1:6, labels = lab) +
-    scale_color_manual(values = c("#36a7e9", "#2d3494")) +
+    scale_color_manual(values = c("#38c99e", "#cf1d1d")) +
     themes360info::theme_360() +
-    theme(legend.position = "top",
-    axis.text.x = element_text(angle = 0, size = 10)) +
+    theme(
+        legend.position = "none", 
+        axis.text.x = element_text(angle = 0, size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.subtitle = ggtext::element_markdown(lineheight = 1)
+    ) +
     labs(
-        title = "Does fear of missing out increase anxiety\nin teens?",
-        subtitle = "Based on a study of 951 adolescents, **FoMO moderates the link** between social media use<br> and anxiety in adolescence. Those with <span style='color:#36a7e9'>lower levels of FoMO</span> benefit from increased social<br> media usage, while those with <span style='color:#2d3494'>higher levels of FoMO</span> experiemce more anxiety",
-        caption = "Source: Einstein et.al (2023)",
+        title = "DOES FEAR OF MISSING OUT INCREASE\nANXIETY IN TEENS?",
+        subtitle = "Based on a study of 951 adolescents, **FoMO moderates the link** between social media use<br> and anxiety in adolescence. Those with <span style='color:#38c99e'>**lower levels of FoMO**</span> benefit from increased social<br> media usage, while those with <span style='color:#cf1d1d'>**higher levels of FoMO**</span> experience more anxiety",
+        caption = "**CHART:** James Goldie, 360info & Dean Marchiori, Wave Data Labs<br>**DATA:** Einstein et al. (2023) [doi: 10.1080/00049530.2023.2217961]",
         x = "Frequency of social media use",
         y = "Anxiety symptoms",
         colour = "Level of FoMO"
@@ -59,6 +66,5 @@ fomo_plot <- fomo |>
 
 fomo_plot
 
-save_360plot(fomo_plot, here("out/img/fomo.png"), shape = "square")
-
+save_360plot(fomo_plot, here("out/img/fomo.png"), shape = "square")    
 ```
