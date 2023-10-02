@@ -42,12 +42,13 @@ fomo_plot <- fomo |>
     ) |>
     drop_na() |>
     ggplot(aes(SM_0Reversed, SCAS_TOTAL_0, colour = fomo_hi_low)) +
-    geom_point(position = position_jitterdodge(), alpha = 0.4) +
+    geom_point(position = position_jitterdodge(), aes(alpha = fomo_hi_low)) +
     geom_smooth(method = "lm", se = F) +
     scale_y_sqrt() +
     scale_x_continuous(breaks = 1:6, labels = lab) +
-    scale_color_manual(values = c("#38c99e", "#cf1d1d")) +
-    themes360info::theme_360() +
+    scale_color_manual(values = c("#26d4e0", "#cf1d1d")) +
+    scale_alpha_manual(values=c(1, 0.9)) +
+    themes360info::theme_360() + 
     theme(
         legend.position = "none", 
         axis.text.x = element_text(angle = 0, size = 10),
@@ -56,11 +57,11 @@ fomo_plot <- fomo |>
         plot.subtitle = ggtext::element_markdown(lineheight = 1)
     ) +
     labs(
-        title = "DOES FEAR OF MISSING OUT INCREASE\nANXIETY IN TEENS?",
-        subtitle = "Based on a study of 951 adolescents, **FoMO moderates the link** between social media use<br> and anxiety in adolescence. Those with <span style='color:#38c99e'>**lower levels of FoMO**</span> benefit from increased social<br> media usage, while those with <span style='color:#cf1d1d'>**higher levels of FoMO**</span> experience more anxiety",
+        title = "TEEN FOMO",
+        subtitle = "A survey of 951 teenagers found that teens who reported a <span style='color:#cf1d1d'>**high fear of missing out**</span>, or FOMO,<br> also reported increased anxiety as they used social media more. But teens with <span style='color:#26d4e0'>**low FOMO**</span><br> reported less anxiety as they used it more.",
         caption = "**CHART:** James Goldie, 360info & Dean Marchiori, Wave Data Labs<br>**DATA:** Einstein et al. (2023) [doi: 10.1080/00049530.2023.2217961]",
         x = "Frequency of social media use",
-        y = "Anxiety symptoms",
+        y = "Anxiety symptom score",
         colour = "Level of FoMO"
     )
 
