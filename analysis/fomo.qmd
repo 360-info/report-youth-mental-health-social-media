@@ -41,15 +41,20 @@ fomo_plot <- fomo |>
         )
     ) |>
     drop_na() |>
-    ggplot(aes(SM_0Reversed, sqrt(SCAS_TOTAL_0), colour = fomo_hi_low)) +
+    ggplot(aes(SM_0Reversed, SCAS_TOTAL_0, colour = fomo_hi_low)) +
     geom_point(position = position_jitterdodge(), aes(alpha = fomo_hi_low)) +
     geom_smooth(method = "lm", se = F) +
+    scale_y_sqrt(
+        breaks = c(0, 25, 50, 75, 114),
+        labels = c(0, 25, 50, 75, 114),
+        limits = c(0, 144)
+    ) +
     scale_x_continuous(breaks = 1:6, labels = lab) +
     scale_color_manual(values = c("#26d4e0", "#cf1d1d")) +
-    scale_alpha_manual(values=c(1, 0.9)) +
-    themes360info::theme_360() + 
+    scale_alpha_manual(values = c(1, 0.9)) +
+    themes360info::theme_360() +
     theme(
-        legend.position = "none", 
+        legend.position = "none",
         axis.text.x = element_text(angle = 0, size = 10),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
@@ -66,5 +71,5 @@ fomo_plot <- fomo |>
 
 fomo_plot
 
-save_360plot(fomo_plot, here("out/img/fomo.png"), shape = "square")    
+save_360plot(fomo_plot, here("out/img/fomo.png"), shape = "square")
 ```
