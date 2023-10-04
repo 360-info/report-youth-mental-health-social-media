@@ -41,10 +41,9 @@ fomo_plot <- fomo |>
         )
     ) |>
     drop_na() |>
-    ggplot(aes(SM_0Reversed, SCAS_TOTAL_0, colour = fomo_hi_low)) +
+    ggplot(aes(SM_0Reversed, sqrt(SCAS_TOTAL_0), colour = fomo_hi_low)) +
     geom_point(position = position_jitterdodge(), aes(alpha = fomo_hi_low)) +
     geom_smooth(method = "lm", se = F) +
-    scale_y_sqrt() +
     scale_x_continuous(breaks = 1:6, labels = lab) +
     scale_color_manual(values = c("#26d4e0", "#cf1d1d")) +
     scale_alpha_manual(values=c(1, 0.9)) +
