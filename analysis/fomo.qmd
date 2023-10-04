@@ -62,7 +62,7 @@ fomo_plot <- fomo |>
     ) +
     labs(
         title = "TEEN FOMO",
-        subtitle = "A survey of 951 teenagers found that teens who reported a <span style='color:#cf1d1d'>**high fear of missing out**</span>, or FOMO,<br> also reported increased anxiety as they used social media more. But teens with <span style='color:#26d4e0'>**low FOMO**</span><br> reported less anxiety as they used it more.",
+        subtitle = "A survey of 951 teenagers found that teens who reported a <span style='color:#cf1d1d'>**high fear of missing out**</span>, or FOMO,<br> also reported increased anxiety as they used social media more. But teens with <span style='color:#26d4e0'>**low to no FOMO**</span><br> reported less anxiety as they used it more.",
         caption = "**CHART:** James Goldie, 360info & Dean Marchiori, Wave Data Labs<br>**DATA:** Einstein et al. (2023) [doi: 10.1080/00049530.2023.2217961]",
         x = "Frequency of social media use",
         y = "Anxiety symptom score",
